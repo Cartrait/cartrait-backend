@@ -1,0 +1,7 @@
+# netlify.toml
+[build]
+  functions = "functions"
+  command   = ""    # no build step
+
+[dev]
+  functions = "functions"
