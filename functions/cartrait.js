@@ -5,7 +5,7 @@ const fetch = require('node-fetch');
 exports.handler = async (event) => {
   const reg = event.queryStringParameters?.reg;
   if (!reg) {
-    return { statusCode: 400, body: 'Missing reg parameter' };
+    return { statusCode: 400, body: 'Missing registration parameter' };
   }
 
   // 1) Call Vehicle Data Global
