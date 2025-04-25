@@ -21,6 +21,15 @@ exports.handler = async (event) => {
   url.searchParams.set('searchType',  'Reg');
   url.searchParams.set('searchTerm',  reg);
 
+// …after you build the URL…
+console.log('VDG lookup URL:', url.toString());
+console.log('Env vars:', {
+  key: process.env.VDG_KEY,
+  account: process.env.VDG_ACCOUNT_ID,
+  pkg: process.env.VDG_PACKAGE_NAME,
+  base: process.env.VDG_BASE_URL
+});
+
   // 3. call the API
   let data;
   try {
