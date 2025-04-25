@@ -1,52 +1,63 @@
-// functions/cartrait.js
 const fetch = require('node-fetch');
 
 exports.handler = async (event) => {
-  // 1) Pull the incoming VRM from either ?registration= or ?reg=
+  // 1. Grab the registration (VRM) query-string parameter
   const params = event.queryStringParameters || {};
-  const raw    = (params.registration || params.reg || '').trim();
-  if (!raw) {
+  const reg = params.registration || params.reg;
+  if (!reg) {
     return {
       statusCode: 400,
-      body: 'Missing registration parameter'
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      body: 'Missing registration parameter',
     };
   }
-  const vrm = raw.toUpperCase();
 
-  // 2) Read your Netlify env-vars (set these in your Site settings → Build & deploy → Environment)
-  const BASE_URL     = process.env.VDG_BASE_URL       || 'https://uk.api.vehicledataglobal.com';
-  const API_KEY      = process.env.VDG_KEY            || '';
-  const PACKAGE_NAME = process.env.VDG_PACKAGE_NAME   || 'VehicleDetailsWithImage';
+  // 2. Build the external API URL
+  //    uses these Netlify ENV vars:
+  //      VDG_BASE_URL         e.g. "https://uk.api.vehicledataglobal.com"
+  //      VDG_KEY              your API key
+  //      VDG_ACCOUNT_ID       your account ID
+  //      VDG_PACKAGE_NAME     e.g. "VehicleDetailsWithImage"
+  const baseUrl    = process.env.VDG_BASE_URL;
+  const apiKey     = process.env.VDG_KEY;
+  const accountId  = process.env.VDG_ACCOUNT_ID;
+  const pkg        = process.env.VDG_PACKAGE_NAME;
 
-  // 3) Build the lookup URL exactly as the Quick Lookup UI does
-  const url = new URL(`${BASE_URL}/r2/lookup`);
-  url.searchParams.set('packagename', PACKAGE_NAME);
-  url.searchParams.set('apikey',      API_KEY);
-  url.searchParams.set('vrm',         vrm);
+  const url = new URL(`${baseUrl}/r2/lookup`);
+  url.searchParams.set('packageName', encodeURIComponent(pkg));
+  url.searchParams.set('apiKey', apiKey);
+  url.searchParams.set('accountId', accountId);
+  url.searchParams.set('searchType', 'VRM');
+  url.searchParams.set('searchTerm', reg);
 
-  console.log('VDG lookup URL:', url.toString());
-
-  // 4) Perform the request and proxy the response back to the browser
   try {
-    const res = await fetch(url);
-    const txt = await res.text();
-
+    const res = await fetch(url.toString());
+    const text = await res.text();
     if (!res.ok) {
       return {
         statusCode: res.status,
-        body: `API error: ${txt}`
+        headers: {
+          'Content-Type': 'text/plain',
+          'Access-Control-Allow-Origin': '*',
+        },
+        body: `API error: ${text}`,
       };
     }
 
+    // 3. Sit back and ship the JSON right through
     return {
       statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
-      body: txt
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
+      body: text,
     };
   } catch (err) {
     return {
       statusCode: 502,
-      body: `Lookup failed: ${err.message}`
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      body: `Lookup failed: ${err.message}`,
     };
   }
 };
