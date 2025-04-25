@@ -1,28 +1,37 @@
 
-
-// 1. pull in your env-vars at the top
-const API_KEY     = process.env.VDG_KEY;
-const ACCOUNT_ID  = process.env.VDG_ACCOUNT_ID;
-const BASE_URL    = process.env.VDG_BASE_URL || 'https://uk.api.vehicledataglobal.com';
-
-// …
+const fetch = require('node-fetch');
 
 exports.handler = async (event) => {
+  // 1) grab the reg
   const params = event.queryStringParameters || {};
-  const reg = (params.registration || params.reg || '').trim().toUpperCase();
+  const reg    = (params.registration || params.reg || '').trim().toUpperCase();
   if (!reg) {
     return { statusCode: 400, body: 'Missing registration parameter' };
   }
 
-  // 2. build your lookup URL with *all three* required params
-  const url = new URL(`${BASE_URL}/r2/lookup`);
-  url.searchParams.set('apiKey',    API_KEY);
-  url.searchParams.set('accountId', ACCOUNT_ID);
-  url.searchParams.set('registration', reg);
+  // 2) read your env-vars
+  const pkg       = process.env.VDG_PACKAGE_NAME;  // e.g. "VehicleDetailsWithImage"
+  const baseUrl   = process.env.VDG_BASE_URL;      // e.g. "https://uk.api.vehicledataglobal.com"
+  const apiKey    = process.env.VDG_KEY;           // your trial API key
+  const accountId = process.env.VDG_ACCOUNT_ID;    // your trial account ID
+
+  // 3) build the lookup URL
+  const url = new URL(`${baseUrl}/r2/lookup`);
+  url.searchParams.set('packageName', pkg);
+  url.searchParams.set('searchType',  'Reg');
+  url.searchParams.set('searchTerm',  reg);
 
   let data;
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, {
+      headers: {
+        // if your account uses a header key rather than query-param, use this:
+        'Ocp-Apim-Subscription-Key': apiKey
+        // otherwise some endpoints want it as ?apiKey=xxx:
+        // 'Content-Type': 'application/json'
+      }
+    });
+
     if (!res.ok) {
       const txt = await res.text();
       return { statusCode: res.status, body: `API error: ${txt}` };
@@ -32,19 +41,9 @@ exports.handler = async (event) => {
     return { statusCode: 502, body: `Lookup failed: ${err.message}` };
   }
 
-  // …rest of your SVG-building logic…
-
-  // 4. pluck out what we need and return JSON
-  const r = (data.results && data.results[0]) || {};
-  const out = {
-    make:   r.Make,
-    model:  r.Model,
-    colour: r.Colour,
-    year:   r.YearOfManufacture,
-    image:  r.ThumbnailUrl
-  };
+  // 4) return whatever you want here
   return {
     statusCode: 200,
-    body: JSON.stringify(out)
+    body: JSON.stringify(data),
   };
 };
