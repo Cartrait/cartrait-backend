@@ -2,40 +2,46 @@
 const fetch = require('node-fetch');
 
 exports.handler = async (event) => {
-  // grab `registration` from the query string
-  const { registration } = event.queryStringParameters || {};
-  const reg = (registration || '').trim().toUpperCase();
+  // 1. get the reg from either ?registration= or ?reg=
+  const params = event.queryStringParameters || {};
+  const reg = (params.registration || params.reg || '').trim().toUpperCase();
   if (!reg) {
-    return { statusCode: 400, body: 'Missing registration parameter' };
+    return {
+      statusCode: 400,
+      body: 'Missing registration parameter'
+    };
   }
 
-  // build our r2 lookup URL
-  const baseUrl = process.env.VDG_BASE_URL;        // e.g. "https://uk.api.vehicledataglobal.com"
-  const pkg     = process.env.VDG_PACKAGE_NAME;    // e.g. "VehicleDetailsWithImage"
-  const url     = new URL(`${baseUrl}/r2/lookup`);
+  // 2. build lookup URL
+  const baseUrl      = process.env.VDG_BASE_URL;       // e.g. https://uk.api.vehicledataglobal.com
+  const pkgName      = process.env.VDG_PACKAGE_NAME;   // e.g. VehicleDetailsWithImage
+  const apiKey       = process.env.VDG_KEY;            // your VDG key
+  const accountId    = process.env.VDG_ACCOUNT_ID;     // your account id
 
-  url.searchParams.set('packageName',  pkg);
-  url.searchParams.set('registration', reg);
-  url.searchParams.set('apiKey',       process.env.VDG_KEY);
-  url.searchParams.set('accountId',    process.env.VDG_ACCOUNT_ID);
+  const url = new URL(`${baseUrl}/r2/lookup`);
+  url.searchParams.set('packageName', pkgName);
+  url.searchParams.set('searchType',  'Reg');
+  url.searchParams.set('searchTerm',  reg);
+  url.searchParams.set('apiKey',      apiKey);
+  url.searchParams.set('accountId',   accountId);
 
-  // call VDG
+  // 3. fetch from VDG
   let data;
   try {
     const res = await fetch(url);
     if (!res.ok) {
-      const txt = await res.text();
-      return { statusCode: res.status, body: `API error: ${txt}` };
+      const errTxt = await res.text();
+      return { statusCode: res.status, body: `API error: ${errTxt}` };
     }
     data = await res.json();
   } catch (err) {
     return { statusCode: 502, body: `Lookup failed: ${err.message}` };
   }
 
-  // return JSON straight through
+  // 4. return raw JSON (you can swap this out for your art-generation later)
   return {
     statusCode: 200,
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
+    body: JSON.stringify(data)
   };
 };
