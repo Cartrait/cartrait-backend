@@ -1,37 +1,30 @@
 
+// functions/cartrait.js
 const fetch = require('node-fetch');
 
-exports.handler = async (event) => {
-  // 1) grab the reg
+exports.handler = async (event, context) => {
+  // 1) Grab the registration param
   const params = event.queryStringParameters || {};
   const reg    = (params.registration || params.reg || '').trim().toUpperCase();
   if (!reg) {
     return { statusCode: 400, body: 'Missing registration parameter' };
   }
 
-  // 2) read your env-vars
-  const pkg       = process.env.VDG_PACKAGE_NAME;  // e.g. "VehicleDetailsWithImage"
-  const baseUrl   = process.env.VDG_BASE_URL;      // e.g. "https://uk.api.vehicledataglobal.com"
-  const apiKey    = process.env.VDG_KEY;           // your trial API key
-  const accountId = process.env.VDG_ACCOUNT_ID;    // your trial account ID
+  // 2) Build your lookup URL
+  const pkg     = process.env.VDG_PACKAGE_NAME;      // e.g. "VehicleDetailsWithImage"
+  const baseUrl = process.env.VDG_BASE_URL;          // e.g. "https://uk.api.vehicledataglobal.com"
+  const url     = new URL(`${baseUrl}/r2/lookup`);
 
-  // 3) build the lookup URL
-  const url = new URL(`${baseUrl}/r2/lookup`);
   url.searchParams.set('packageName', pkg);
-  url.searchParams.set('searchType',  'Reg');
-  url.searchParams.set('searchTerm',  reg);
+  url.searchParams.set('searchType',   'Reg');
+  url.searchParams.set('searchTerm',   reg);
+  url.searchParams.set('apiKey',       process.env.VDG_KEY);
+  url.searchParams.set('accountId',    process.env.VDG_ACCOUNT_ID);
 
+  // 3) Fetch it
   let data;
   try {
-    const res = await fetch(url, {
-      headers: {
-        // if your account uses a header key rather than query-param, use this:
-        'Ocp-Apim-Subscription-Key': apiKey
-        // otherwise some endpoints want it as ?apiKey=xxx:
-        // 'Content-Type': 'application/json'
-      }
-    });
-
+    const res = await fetch(url);
     if (!res.ok) {
       const txt = await res.text();
       return { statusCode: res.status, body: `API error: ${txt}` };
@@ -41,9 +34,10 @@ exports.handler = async (event) => {
     return { statusCode: 502, body: `Lookup failed: ${err.message}` };
   }
 
-  // 4) return whatever you want here
+  // 4) Return JSON (or swap out for SVG/art generation)
   return {
     statusCode: 200,
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   };
 };
