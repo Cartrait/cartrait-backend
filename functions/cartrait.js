@@ -1,25 +1,25 @@
-
 // functions/cartrait.js
 const fetch = require('node-fetch');
 
 exports.handler = async (event) => {
-  const params = event.queryStringParameters || {};
-  const reg    = (params.registration || '').trim().toUpperCase();
+  // grab `registration` from the query string
+  const { registration } = event.queryStringParameters || {};
+  const reg = (registration || '').trim().toUpperCase();
   if (!reg) {
     return { statusCode: 400, body: 'Missing registration parameter' };
   }
 
-  // build URL
-  const baseUrl = process.env.VDG_BASE_URL;      // e.g. "https://uk.api.vehicledataglobal.com"
-  const pkg     = process.env.VDG_PACKAGE_NAME;  // e.g. "VehicleDetailsWithImage"
+  // build our r2 lookup URL
+  const baseUrl = process.env.VDG_BASE_URL;        // e.g. "https://uk.api.vehicledataglobal.com"
+  const pkg     = process.env.VDG_PACKAGE_NAME;    // e.g. "VehicleDetailsWithImage"
   const url     = new URL(`${baseUrl}/r2/lookup`);
 
-  url.searchParams.set('packageName', pkg);
+  url.searchParams.set('packageName',  pkg);
   url.searchParams.set('registration', reg);
   url.searchParams.set('apiKey',       process.env.VDG_KEY);
   url.searchParams.set('accountId',    process.env.VDG_ACCOUNT_ID);
 
-  // fetch
+  // call VDG
   let data;
   try {
     const res = await fetch(url);
@@ -32,6 +32,7 @@ exports.handler = async (event) => {
     return { statusCode: 502, body: `Lookup failed: ${err.message}` };
   }
 
+  // return JSON straight through
   return {
     statusCode: 200,
     headers: { 'Content-Type': 'application/json' },
