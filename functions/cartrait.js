@@ -11,11 +11,11 @@ exports.handler = async (event) => {
     };
   }
 
-  - // 2 Build your lookup URL
-  - const url = new URL('https://uk.api.vehicledataglobal.com/r2/lookup');
-  - url.searchParams.set('apiKey',    process.env.VDG_KEY);
-  - url.searchParams.set('accountId', process.env.VDG_ACCOUNT_ID);
-  - url.searchParams.set('registration', reg);
+  const pkg = 'VehicleDetailsWithImage';                         // ← your data package name
+const url = new URL('https://uk.api.vehicledataglobal.com/r2/lookup');
+url.searchParams.set('packageName', encodeURIComponent(pkg));  // ← must match “Select a Data Package”
+url.searchParams.set('searchType',   'Reg');                   // ← fixed “Reg” lookup
+url.searchParams.set('searchTerm',   encodeURIComponent(reg)); // ← the user’s reg
   + // 2 Build your lookup URL with packageName, searchType and searchTerm
   + const pkg = 'VehicleDetailsWithImage';
   + const url = new URL('https://uk.api.vehicledataglobal.com/r2/lookup');
@@ -28,7 +28,7 @@ try {
   const res = await fetch(url, {
     headers: {
       // use whatever name you chose for your env‐var
-      'Ocp-Apim-Subscription-Key': process.env.VDG_API_KEY
+      'Ocp-Apim-Subscription-Key': process.env.VDG_KEY
     }
   });
   if (!res.ok) {
