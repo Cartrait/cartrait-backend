@@ -33,7 +33,7 @@ exports.handler = async (event) => {
   }
 
   // …rest of your SVG-building logic…
-};
+
   // 4. pluck out what we need and return JSON
   const r = (data.results && data.results[0]) || {};
   const out = {
