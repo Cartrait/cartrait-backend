@@ -1,15 +1,16 @@
+// functions/cartrait.js
 const fetch = require('node-fetch');
 
 exports.handler = async (event) => {
-  // 0) Always allow CORS
+  // Always allow CORS from anywhere
   const headers = {
     'Access-Control-Allow-Origin': '*',
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
   };
 
-  // 1) Grab the registration (either "registration" or "reg")
+  // 1) Grab the incoming reg param
   const params = event.queryStringParameters || {};
-  const reg = params.registration || params.reg;
+  const reg    = params.registration || params.reg;
   if (!reg) {
     return {
       statusCode: 400,
@@ -18,21 +19,21 @@ exports.handler = async (event) => {
     };
   }
 
-  // 2) Build your lookup URL
-  const pkg     = process.env.VDG_PACKAGE_NAME; // e.g. VehicleDetailsWithImage
-  const baseUrl = process.env.VDG_BASE_URL;     // e.g. https://uk.api.vehicledataglobal.com
+  // 2) Build the VehicleDataGlobal lookup URL
+  const pkg     = process.env.VDG_PACKAGE_NAME; // e.g. "VehicleDetailsWithImage"
+  const baseUrl = process.env.VDG_BASE_URL;     // e.g. "https://uk.api.vehicledataglobal.com"
+  const key     = process.env.VDG_KEY;      // your sandbox/live API key
+
   const url = new URL(`${baseUrl}/r2/lookup`);
   url.searchParams.set('packageName', pkg);
   url.searchParams.set('searchType',    'VRM');
-  url.searchParams.set('searchTerm',    reg);
+  url.searchParams.set('searchTerm',    reg.toUpperCase());
+  url.searchParams.set('apiKey',        key);
 
-  let data;
+  // 3) Fetch and handle errors
+  let json;
   try {
-    const res = await fetch(url.toString(), {
-      headers: {
-        'Ocp-Apim-Subscription-Key': process.env.VDG_API_KEY
-      }
-    });
+    const res = await fetch(url.toString());
     if (!res.ok) {
       const txt = await res.text();
       return {
@@ -41,7 +42,7 @@ exports.handler = async (event) => {
         body: JSON.stringify({ error: `API error: ${txt}` })
       };
     }
-    data = await res.json();
+    json = await res.json();
   } catch (err) {
     return {
       statusCode: 502,
@@ -50,8 +51,8 @@ exports.handler = async (event) => {
     };
   }
 
-  // 3) Extract & return the array of options (body details)
-  const options = data.BodyDetails || [];
+  // 4) Pull out the BodyDetails array (or fallback to empty)
+  const options = Array.isArray(json.BodyDetails) ? json.BodyDetails : [];
   return {
     statusCode: 200,
     headers,
