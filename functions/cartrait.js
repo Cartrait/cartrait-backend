@@ -1,58 +1,54 @@
 const fetch = require('node-fetch');
 
 exports.handler = async (event) => {
-  // 1. Pull the registration parameter
-  const qs    = event.queryStringParameters || {};
-  const vrm   = qs.registration || qs.reg;
+  // 1) read ?registration=NY19ARZ
+  const reg = (event.queryStringParameters||{}).registration || '';
+  const vrm = reg.trim().toUpperCase();
   if (!vrm) {
     return {
       statusCode: 400,
       headers: { 'Access-Control-Allow-Origin': '*' },
-      body: 'Missing registration parameter'
+      body: JSON.stringify({ error: 'Missing registration parameter' }),
     };
   }
 
-  // 2. Build the external lookup URL
-  const baseUrl   = process.env.VDG_BASE_URL;        // e.g. "https://uk.api.vehicledataglobal.com"
-  const apiKey    = process.env.VDG_KEY;             // your VDG API key
-  const accountId = process.env.VDG_ACCOUNT_ID;      // your VDG account ID
-  const pkg       = process.env.VDG_PACKAGE_NAME;    // e.g. "VehicleDetailsWithImage"
+  // 2) build upstream URL
+  const pkg     = process.env.VDG_PACKAGE_NAME;
+  const apiKey  = process.env.VDG_KEY;
+  const baseUrl = process.env.VDG_BASE_URL || 'https://uk.api.vehicledataglobal.com';
 
   const url = new URL(`${baseUrl}/r2/lookup`);
-  url.searchParams.set('packageName', encodeURIComponent(pkg));
+  url.searchParams.set('packageName', pkg);
   url.searchParams.set('apiKey', apiKey);
-  url.searchParams.set('accountId', accountId);
-  url.searchParams.set('searchType', 'VRM');
-  url.searchParams.set('searchTerm', vrm);
+  url.searchParams.set('vrm', vrm);
 
+  let payload;
   try {
     const res = await fetch(url.toString());
-    const text = await res.text();
+    const txt = await res.text();
     if (!res.ok) {
       return {
         statusCode: res.status,
-        headers: {
-          'Content-Type': 'text/plain',
-          'Access-Control-Allow-Origin': '*'
-        },
-        body: `API error: ${text}`
+        headers: { 'Access-Control-Allow-Origin': '*' },
+        body: JSON.stringify({ error: txt || res.statusText }),
       };
     }
-
-    // 3. Return the JSON directly
-    return {
-      statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      },
-      body: text
-    };
+    payload = JSON.parse(txt);
   } catch (err) {
     return {
       statusCode: 502,
       headers: { 'Access-Control-Allow-Origin': '*' },
-      body: `Lookup failed: ${err.message}`
+      body: JSON.stringify({ error: err.message }),
     };
   }
+
+  // 3) return raw JSON to the browser
+  return {
+    statusCode: 200,
+    headers: {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+    },
+    body: JSON.stringify(payload),
+  };
 };
