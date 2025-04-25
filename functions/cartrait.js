@@ -22,7 +22,7 @@ exports.handler = async (event) => {
   // 2) Build the VehicleDataGlobal lookup URL
   const pkg     = process.env.VDG_PACKAGE_NAME; // e.g. "VehicleDetailsWithImage"
   const baseUrl = process.env.VDG_BASE_URL;     // e.g. "https://uk.api.vehicledataglobal.com"
-  const key     = process.env.VDG_API_KEY;      // your sandbox/live API key
+  const key     = process.env.VDG_KEY;      // your sandbox/live API key
 
   const url = new URL(`${baseUrl}/r2/lookup`);
   url.searchParams.set('packageName', pkg);
