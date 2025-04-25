@@ -2,7 +2,7 @@
 const fetch = require('node-fetch');
 
 exports.handler = async (event) => {
-  // 1. get the reg from either ?registration= or ?reg=
+  // 1. grab the reg parameter
   const params = event.queryStringParameters || {};
   const reg = (params.registration || params.reg || '').trim().toUpperCase();
   if (!reg) {
@@ -12,36 +12,34 @@ exports.handler = async (event) => {
     };
   }
 
-  // 2. build lookup URL
-  const baseUrl      = process.env.VDG_BASE_URL;       // e.g. https://uk.api.vehicledataglobal.com
-  const pkgName      = process.env.VDG_PACKAGE_NAME;   // e.g. VehicleDetailsWithImage
-  const apiKey       = process.env.VDG_KEY;            // your VDG key
-  const accountId    = process.env.VDG_ACCOUNT_ID;     // your account id
-
-  const url = new URL(`${baseUrl}/r2/lookup`);
-  url.searchParams.set('packageName', pkgName);
+  // 2. build your lookup URL
+  //    Make sure VDG_BASE_URL is set to e.g. "https://uk.api.vehicledataglobal.com"
+  const url = new URL(`${process.env.VDG_BASE_URL}/r2/lookup`);
+  url.searchParams.set('apiKey',      process.env.VDG_KEY);
+  url.searchParams.set('accountId',   process.env.VDG_ACCOUNT_ID);
+  url.searchParams.set('packageName', process.env.VDG_PACKAGE_NAME);
   url.searchParams.set('searchType',  'Reg');
   url.searchParams.set('searchTerm',  reg);
-  url.searchParams.set('apiKey',      apiKey);
-  url.searchParams.set('accountId',   accountId);
 
-  // 3. fetch from VDG
+  // 3. call the API
   let data;
   try {
     const res = await fetch(url);
     if (!res.ok) {
-      const errTxt = await res.text();
-      return { statusCode: res.status, body: `API error: ${errTxt}` };
+      const txt = await res.text();
+      return { statusCode: res.status, body: `API error: ${txt}` };
     }
     data = await res.json();
   } catch (err) {
-    return { statusCode: 502, body: `Lookup failed: ${err.message}` };
+    return {
+      statusCode: 502,
+      body: `Lookup failed: ${err.message}`
+    };
   }
 
-  // 4. return raw JSON (you can swap this out for your art-generation later)
+  // 4. return the raw JSON (you can massage it into SVG later)
   return {
     statusCode: 200,
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
   };
 };
