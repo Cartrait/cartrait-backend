@@ -11,26 +11,34 @@ exports.handler = async (event) => {
     };
   }
 
-  // 2️⃣ Build your lookup URL
-  const url = new URL('https://uk.api.vehicledataglobal.com/r2/lookup');
-  url.searchParams.set('apiKey',     process.env.VDG_KEY);
-  url.searchParams.set('accountId',  process.env.VDG_ACCOUNT_ID);
-  url.searchParams.set('registration', reg);
+  - // 2 Build your lookup URL
+  - const url = new URL('https://uk.api.vehicledataglobal.com/r2/lookup');
+  - url.searchParams.set('apiKey',    process.env.VDG_KEY);
+  - url.searchParams.set('accountId', process.env.VDG_ACCOUNT_ID);
+  - url.searchParams.set('registration', reg);
+  + // 2 Build your lookup URL with packageName, searchType and searchTerm
+  + const pkg = 'VehicleDetailsWithImage';
+  + const url = new URL('https://uk.api.vehicledataglobal.com/r2/lookup');
+  + url.searchParams.set('packageName', encodeURIComponent(pkg));
+  + url.searchParams.set('searchType',  'Reg');
+  + url.searchParams.set('searchTerm',  encodeURIComponent(reg));
 
   let data;
-  try {
-    const res = await fetch(url);
-    if (!res.ok) {
-      const txt = await res.text();
-      return { statusCode: res.status, body: `API error: ${txt}` };
+try {
+  const res = await fetch(url, {
+    headers: {
+      // use whatever name you chose for your env‐var
+      'Ocp-Apim-Subscription-Key': process.env.VDG_API_KEY
     }
-    data = await res.json();
-  } catch (err) {
-    return {
-      statusCode: 502,
-      body: `Lookup failed: ${err.message}`
-    };
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    return { statusCode: res.status, body: `API error: ${txt}` };
   }
+  data = await res.json();
+} catch (err) {
+  return { statusCode: 502, body: `Lookup failed: ${err.message}` };
+}
 
   // 3️⃣ Extract fields and build your SVGs
   const details = data.VehicleDetailsWithImage;
